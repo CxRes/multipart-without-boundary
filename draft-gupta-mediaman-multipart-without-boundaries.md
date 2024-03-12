@@ -44,7 +44,7 @@ informative:
 
 --- abstract
 
-TODO Abstract
+This document extends the syntax of the `multipart` media-type, such that the encapsulated messages are not separated by a boundary delimiter. Not only is this syntax simpler to parse, it is safer to use when the encapsulated messages are not known in advance.
 
 
 --- middle

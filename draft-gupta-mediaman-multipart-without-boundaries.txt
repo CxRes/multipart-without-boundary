@@ -1,0 +1,256 @@
+
+
+
+
+Media Type Maintenance                                          R. Gupta
+Internet-Draft                                             12 March 2024
+Updates: 2046 (if approved)                                             
+Intended status: Standards Track                                        
+Expires: 13 September 2024
+
+
+                      Multipart without Boundaries
+        draft-gupta-mediaman-multipart-without-boundaries-latest
+
+Abstract
+
+   TODO Abstract
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://CxRes.github.io/multipart-without-boundaries/draft-gupta-
+   mediaman-multipart-without-boundaries.html.  Status information for
+   this document may be found at https://datatracker.ietf.org/doc/draft-
+   gupta-mediaman-multipart-without-boundaries/.
+
+   Discussion of this document takes place on the Media Type Maintenance
+   Working Group mailing list (mailto:media-types@ietf.org), which is
+   archived at https://mailarchive.ietf.org/arch/browse/media-types/.
+   Subscribe at https://www.ietf.org/mailman/listinfo/media-types/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/CxRes/multipart-without-boundaries.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 13 September 2024.
+
+Copyright Notice
+
+   Copyright (c) 2024 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+   2.  Conventions and Definitions
+   3.  Syntax
+     3.1.  Example
+     3.2.  Error Handling
+     3.3.  Preamble and Epilogue
+   4.  Security Considerations
+   5.  IANA Considerations
+   6.  Normative References
+   Author's Address
+
+1.  Introduction
+
+   The multipart media-type ([RFC2046], Section 5.1) is the canonical
+   format for message encapsulation for e-mail and HTTP ([HTTP],
+   Section 8.3.3).
+
+   The multipart media-type uses strings as boundary delimiters as a
+   simple way to separate encapsulated messages.  However, the use of
+   boundary strings as separators in multipart media-type has two
+   significant shortcomings:
+
+   1.  A middleware/transformer that extracts parts must necessarily
+       convert the entire convert the multipart message to a string and
+       parse the contents in their entirety to discover the boundary
+       separators.  If the part body is not meant to be consumed as a
+       string, the same needs to then be re-encoded.  This burden only
+       increases when multipart messages are nested, with the recipient
+       having to check for boundary strings corresponding to each nested
+       multipart message.
+
+   2.  It is unsuitable for encapsulating messages where the contents
+       are not known in advance.  There is simply no way to ensure that
+       a message generated in the future will not contain the chosen
+       boundary string.
+
+   For this reason, we propose to extend the multipart media-type,
+   replacing the use of boundary string as a part separator with the
+   Content-Length header field to determine the length of each part.
+
+2.  Conventions and Definitions
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+3.  Syntax
+
+   In lieu of the boundary parameter ([RFC2046], Section 5.1.1), the
+   Content-Type header field for multipart entities MAY instead contain
+   a no-boundary parameter.  The no-boundary parameter is boolean which
+   is true when defined, false otherwise.
+
+   If the Content-Type header specifies a boundary parameter, the no-
+   boundary parameter MUST be ignored and the message shall be parsed as
+   specified in Section 5.1.1 of [RFC2046].
+
+   When the no-boundary parameter is defined:
+
+   *  Each part (other than the exceptions specified below) MUST define
+      a Content-Length header field.  Other than being defined for each
+      part of a multipart message, the Content-Length header field must
+      be interpreted as defined in Section 8.3 of [HTTP].
+
+   *  Each part of the multipart message, except the first, MUST be
+      preceded by at least two line breaks (CRLF).  The line breaks
+      preceding a part MUST be ignored when calculating the content
+      length.
+
+   *  The last message MUST include a Content-Part header field with its
+      value set to -1.
+
+   The two exceptions where a part of the multipart message need not
+   specify the Content-Length header field are:
+
+   1.  In case the part is an empty last message that only includes the
+       Content-Part header field set to -1.
+
+   2.  In case the content type of the part is multipart/*. In other
+       words, the part body is itself a nested multipart message.
+
+      |  *Implementation Guidance:*
+      |  
+      |  A sender may terminate a multipart message by sending a part
+      |  that contains only a Content-Part header field set to -1
+      |  (followed by two line breaks) and no part body.  In this case,
+      |  the Content-Part header, acts just like the last boundary
+      |  delimiter.
+
+3.1.  Example
+
+   Consider the following example of a multipart message (adapted from
+   [RFC2046], Section 5.1.1) constructed using the original syntax:
+
+   From: Nathaniel Borenstein <nsb@bellcore.com>
+   To: Ned Freed <ned@innosoft.com>
+   Date: Sun, 21 Mar 1993 23:56:48 -0800 (PST)
+   Subject: Sample message
+   Content-type: multipart/mixed; boundary="simple boundary"
+
+   --simple boundary
+
+   This is implicitly typed plain US-ASCII text.
+   It does NOT end with a linebreak.
+   --simple boundary
+   Content-type: text/plain; charset=us-ascii
+
+   This is explicitly typed plain US-ASCII text.
+   It DOES end with a linebreak.
+
+   --simple boundary--
+
+   Here is the equivalent multipart message using the new syntax:
+
+   From: Nathaniel Borenstein <nsb@bellcore.com>
+   To: Ned Freed <ned@innosoft.com>
+   Date: Sun, 21 Mar 1993 23:56:48 -0800 (PST)
+   Subject: Sample message
+   Content-Type: multipart/mixed; no-boundary
+
+   Content-Length: 79
+
+   This is implicitly typed plain US-ASCII text.
+   It does NOT end with a linebreak.
+
+   Content-Length: 76
+   Content-Part: -1
+   Content-Type: text/plain; charset=us-ascii
+
+   This is explicitly typed plain US-ASCII text.
+   It DOES end with a linebreak.
+
+3.2.  Error Handling
+
+   When the Content-Type header specifies a no-boundary parameter (and
+   does not specify a boundary parameter), the recipient MUST fail
+   parsing upon encountering a part that does not conform to the
+   specified syntax and close the stream.
+
+   If a part received is incomplete as determined by the Content-Length
+   at the moment when the response stream is closed, the aforementioned
+   part MUST be ignored.
+
+3.3.  Preamble and Epilogue
+
+   The original multipart media-type syntax allows for messages to
+   contain information before the first boundary delimiter and after the
+   final boundary delimiter, which is meant to be discarded by the
+   recipient ([RFC2046], Section 5.1.1).  The syntax specified here does
+   not allow for this possibility.
+
+4.  Security Considerations
+
+   The security considerations that apply to the use of multipart media-
+   type, are applicable here as well.
+
+5.  IANA Considerations
+
+   This document has no IANA actions.
+
+6.  Normative References
+
+   [HTTP]     Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke,
+              Ed., "HTTP Semantics", STD 97, RFC 9110,
+              DOI 10.17487/RFC9110, June 2022,
+              <https://www.rfc-editor.org/rfc/rfc9110>.
+
+   [RFC2046]  Freed, N. and N. Borenstein, "Multipurpose Internet Mail
+              Extensions (MIME) Part Two: Media Types", RFC 2046,
+              DOI 10.17487/RFC2046, November 1996,
+              <https://www.rfc-editor.org/rfc/rfc2046>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+Author's Address
+
+   Rahul Gupta
+   Email: cxres+ietf@protonmail.com

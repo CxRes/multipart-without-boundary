@@ -119,14 +119,15 @@ Table of Contents
 
    In lieu of the boundary parameter ([RFC2046], Section 5.1.1), the
    Content-Type header field for multipart entities MAY instead contain
-   a no-boundary parameter.  The no-boundary parameter is boolean which
-   is true when defined, false otherwise.
+   a no-boundary parameter.  The no-boundary parameter is a boolean
+   which is true when defined, false otherwise.
 
    If the Content-Type header specifies a boundary parameter, the no-
    boundary parameter MUST be ignored and the message shall be parsed as
    specified in Section 5.1.1 of [RFC2046].
 
-   When the no-boundary parameter is defined:
+   When the no-boundary parameter is defined (and the boundary parameter
+   is not defined):
 
    *  Each part (other than the exceptions specified below) MUST define
       a Content-Length header field.  Other than being defined for each

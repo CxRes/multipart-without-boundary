@@ -67,19 +67,25 @@ For this reason, we propose to extend the `multipart` media-type, replacing the 
 
 # Syntax
 
+## Headers
+
 In lieu of the `boundary` parameter ({{RFC2046, Section 5.1.1}}), the `Content-Type` header field for multipart entities MAY instead contain a `no-boundary` parameter. The `no-boundary` parameter is a boolean which is true when defined, false otherwise.
 
-If the `Content-Type` header specifies a `boundary` parameter, the `no-boundary` parameter MUST be ignored and the message shall be parsed as specified in {{Section 5.1.1 of RFC2046}}.
+When the `Content-Type` header field specifies a `boundary` parameter, the body of the message MUST be parsed as specified in {{Section 5.1.1 of RFC2046}}. A `no-boundary` parameter, if also specified, MUST then be ignored.
 
-When the `no-boundary` parameter is defined (and the `boundary` parameter is not defined):
+When the `Content-Type` header field does not specify a `boundary` parameter but specifies `no-boundary` parameter, a recipient MAY still fail parsing the message body. This is to ensures that legacy systems that parse messages according to rules specified in {{RFC2046}} remain unaffected. However, when the parameter on the `Content-Type` header field are so specified, a recipient choosing to implement this specification MUST parse the multipart message body with the syntax specified below.
 
-+ Each part (other than the exceptions specified below) MUST define a `Content-Length` header field. Other than being defined for each part of a multipart message, the `Content-Length` header field must be interpreted as defined in {{Section 8.3 of HTTP}}.
-+ Each part of the multipart message, except the first, MUST be preceded by at least two line breaks (CRLF). The line breaks preceding a part MUST be ignored when calculating the content length.
-+ The last message MUST include a `Content-Part` header field with its value set to `-1`.
+## Body
 
-The two exceptions where a part of the multipart message need not specify the `Content-Length` header field are:
+When the `Content-Type` header field specifies a `no-boundary` parameter and does not specify a `boundary` parameter:
 
-1. In case the part is an empty last message that only includes the `Content-Part` header field set to `-1`.
++ Each part (other than the exceptions specified below) MUST define a `Content-Length` header field. Other than being defined for each part of a multipart message body, the `Content-Length` header field must be interpreted as defined in {{Section 8.3 of HTTP}}.
++ Each part of the multipart body, except the first, MUST be preceded by at least two line breaks (CRLF). The line breaks preceding a part MUST be ignored when calculating the content length.
++ The last part MUST include a `Content-Part` header field with its value set to `-1`.
+
+The two exceptions where a part of the multipart message body need not specify the `Content-Length` header field are:
+
+1. In case the part is an empty last part, that only includes the `Content-Part` header field set to `-1`.
 1. In case the content type of the part is `multipart/*`. In other words, the part body is itself a nested multipart message.
 
 {:aside}
@@ -136,7 +142,7 @@ It DOES end with a linebreak.
 
 ## Error Handling
 
-When the `Content-Type` header specifies a `no-boundary` parameter (and does not specify a `boundary` parameter), the recipient MUST fail parsing upon encountering a part that does not conform to the specified syntax and close the stream.
+When the `Content-Type` header specifies a `no-boundary` parameter (and does not specify a `boundary` parameter), the recipient that chooses to parse the multipart body MUST fail parsing upon encountering a part that does not conform to the specified syntax and close the stream.
 
 If a part received is incomplete as determined by the `Content-Length` at the moment when the response stream is closed, the aforementioned part MUST be ignored.
 
